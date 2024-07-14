@@ -1,92 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage Account</title>
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="css/settings.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body>
-  <div class="container-fluid">
-    <div class="title-box">
-      <h1 class="text-center">Manage Account</h1>
-    </div>
-    <section class="account-info mt-5">
-      <h2>Account Information</h2>
-      <div class="info">
-        <p><strong>Name:</strong> <span id="user-name">Loading...</span></p>
-        <p><strong>University Email:</strong> <span id="user-email">Loading...</span></p>
-      </div>
-      <div class="password-change mt-5">
-        <h2>Change Password</h2>
-        <div class="form-group">
-          <label for="old-password">Old Password</label>
-          <input type="password" class="form-control smaller-textbox" id="old-password">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Manage Account</title>
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="css/settings.css" />
+        <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    </head>
+    <body>
+        <div class="container-fluid" id="app">
+            <div class="title-box">
+                <h1 class="text-center">Manage Account</h1>
+            </div>
+            <section class="account-info mt-5">
+                <h2>Account Information</h2>
+                <div class="info">
+                    <p><strong>Name:</strong> <span>{{ userInfo.name || userInfo.username }}</span></p>
+                    <p><strong>University Email:</strong> <span>{{ userInfo.email }}</span></p>
+                </div>
+                <div class="password-change mt-5">
+                    <h2>Change Password</h2>
+                    <div class="form-group">
+                        <label for="old-password">Old Password</label>
+                        <input type="password" class="form-control smaller-textbox" v-model="oldPassword" />
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">New Password</label>
+                        <input type="password" class="form-control smaller-textbox" v-model="newPassword" />
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <input type="password" class="form-control smaller-textbox" v-model="confirmPassword" />
+                    </div>
+                    <button type="button" class="btn btn-primary" @click="changePassword">Change Password</button>
+                </div>
+            </section>
         </div>
-        <div class="form-group">
-          <label for="new-password">New Password</label>
-          <input type="password" class="form-control smaller-textbox" id="new-password">
-        </div>
-        <div class="form-group">
-          <label for="confirm-password">Confirm Password</label>
-          <input type="password" class="form-control smaller-textbox" id="confirm-password">
-        </div>
-        <button type="button" class="btn btn-primary" id="change-password-btn">Change Password</button>
-      </div>
-    </section>
-  </div>
 
-  <script>
-    $(document).ready(function() {
-      // Fetch user information
-      $.ajax({
-        type: 'GET',
-        url: '../../controller/admin/get_user_info.php',
-        dataType: 'json',
-        success: function(response) {
-          if (response.status === 'success') {
-            $('#user-name').text(response.data.full_name);
-            $('#user-email').text(response.data.university_email);
-          } else {
-            alert(response.message);
-            console.error('Debug Info:', response.debug);
-          }
-        },
-        error: function(xhr, status, error) {
-          console.error('Error:', xhr.responseText);
-        }
-      });
+        <script>
+            new Vue({
+                el: "#app",
+                data: {
+                    userInfo: {},
+                    oldPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                },
+                created() {
+                    this.fetchUserInfo();
+                },
+                methods: {
+                    fetchUserInfo() {
+                        const token = localStorage.getItem("access");
+                        if (!token) {
+                            alert("You are not logged in!");
+                            window.location.href = "/login"; // Redirect to login page if not logged in
+                            return;
+                        }
+                        axios
+                            .get("http://127.0.0.1:8000/auth/current-user/", {
+                                headers: {
+                                    Authorization: "Bearer " + token,
+                                },
+                            })
+                            .then((response) => {
+                                this.userInfo = response.data;
+                            })
+                            .catch((error) => {
+                                alert("Failed to fetch user info");
+                            });
+                    },
+                    changePassword() {
+                        if (this.newPassword !== this.confirmPassword) {
+                            alert("New password and confirm password do not match");
+                            return;
+                        }
 
-      // Change password
-      $('#change-password-btn').click(function() {
-        var oldPassword = $('#old-password').val();
-        var newPassword = $('#new-password').val();
-        var confirmPassword = $('#confirm-password').val();
-
-        if (newPassword !== confirmPassword) {
-          alert('New passwords do not match.');
-          return;
-        }
-
-        $.ajax({
-          type: 'POST',
-          url: '../../controller/admin/change_password.php',
-          data: {
-            old_password: oldPassword,
-            new_password: newPassword
-          },
-          dataType: 'json',
-          success: function(response) {
-            alert(response.message);
-          },
-          error: function(xhr, status, error) {
-            console.error('Error:', xhr.responseText);
-          }
-        });
-      });
-    });
-  </script>
-</body>
+                        const token = localStorage.getItem("access");
+                        axios
+                            .post(
+                                "http://127.0.0.1:8000/auth/users/change-password/",
+                                {
+                                    old_password: this.oldPassword,
+                                    new_password: this.newPassword,
+                                },
+                                {
+                                    headers: {
+                                        Authorization: "Bearer " + token,
+                                    },
+                                }
+                            )
+                            .then((response) => {
+                                alert("Password changed successfully");
+                                this.oldPassword = "";
+                                this.newPassword = "";
+                                this.confirmPassword = "";
+                            })
+                            .catch((error) => {
+                                alert("Failed to change password");
+                            });
+                    },
+                },
+            });
+        </script>
+    </body>
 </html>
